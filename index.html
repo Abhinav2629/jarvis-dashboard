@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Jarvis">
+  <meta name="description" content="Jarvis — Indian swing trading signals, positions and market regime">
+  <title>Jarvis Swing Desk</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <div class="brand"><img src="icon.svg" alt="">JARVIS</div>
+    <span id="regimePill" class="pill hidden"></span>
+    <div class="stamp" id="stamp"></div>
+    <div class="spacer"></div>
+    <button class="btn primary" id="refreshBtn" title="Run Jarvis now: fresh prices, signals and positions">
+      <span id="refreshIcon">⟳</span><span id="refreshLabel">Refresh</span>
+    </button>
+    <button class="btn icon-btn ghost" id="settingsBtn" title="Settings" aria-label="Settings">⚙︎</button>
+  </div>
+  <div class="runbar hidden" id="runbar">
+    <span class="spin"></span><span id="runText"></span>
+    <div class="progress"><i id="runProg"></i></div>
+    <a id="runLink" href="#" target="_blank" rel="noopener" class="hide-sm">logs</a>
+  </div>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="today" aria-selected="true">Today</button>
+    <button role="tab" data-tab="positions">Positions</button>
+    <button role="tab" data-tab="market">Market</button>
+    <button role="tab" data-tab="stocks">Stocks</button>
+    <button role="tab" data-tab="setups">Setups</button>
+    <button role="tab" data-tab="backtest">Backtest</button>
+    <button role="tab" data-tab="messages">Messages</button>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="tab" id="onboard"></section>
+  <section class="tab active" id="tab-today"></section>
+  <section class="tab" id="tab-positions"></section>
+  <section class="tab" id="tab-market"></section>
+  <section class="tab" id="tab-stocks"></section>
+  <section class="tab" id="tab-setups"></section>
+  <section class="tab" id="tab-backtest"></section>
+  <section class="tab" id="tab-messages"></section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-modal="true" role="dialog"></aside>
+
+<dialog id="settingsDlg">
+  <h3>Settings</h3>
+  <p class="ink2" style="margin-top:0;font-size:14px">Jarvis keeps your data in a <b>private</b> GitHub repo. This device needs a
+    GitHub access token to read it and to start runs. The token stays on this device only.</p>
+  <div class="row">
+    <label class="field">Owner<input id="cfgOwner" autocomplete="off" spellcheck="false"></label>
+    <label class="field">Repository<input id="cfgRepo" autocomplete="off" spellcheck="false"></label>
+  </div>
+  <label class="field">Access token (fine-grained)<input id="cfgToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+  <details style="margin:-4px 0 12px;font-size:14px">
+    <summary class="ink2" style="cursor:pointer">How to create the token (2 minutes, once per device or share one)</summary>
+    <ol class="steps">
+      <li>Open <a id="tokenLink" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained token</a> (sign in as the repo owner).</li>
+      <li><b>Repository access</b>: <i>Only select repositories</i> → choose <code id="repoName2">jarvis</code>.</li>
+      <li><b>Permissions → Repository</b>: <i>Actions</i> = Read and write, <i>Contents</i> = Read-only.</li>
+      <li>Expiration: up to 1 year. Generate, copy, paste above.</li>
+    </ol>
+  </details>
+  <label class="field">Theme
+    <select id="cfgTheme"><option value="auto">Match device</option><option value="light">Light</option><option value="dark">Dark</option></select>
+  </label>
+  <div class="actions">
+    <button class="btn ghost" id="cfgClear">Forget token</button>
+    <button class="btn" id="cfgCancel">Close</button>
+    <button class="btn primary" id="cfgSave">Save &amp; connect</button>
+  </div>
+  <p id="cfgMsg" class="ink2" style="font-size:13px;margin-bottom:0"></p>
+</dialog>
+
+<dialog id="tradeDlg">
+  <h3 id="tradeTitle">Add my trade</h3>
+  <p class="ink2" style="margin-top:0;font-size:14px">Jarvis will manage it like its own: stop, T1 booking, trailing stop and exit alerts.</p>
+  <div class="row">
+    <label class="field">Symbol<input id="trSym" list="symList" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></label>
+    <label class="field">Buy price ₹<input id="trPrice" type="number" step="0.05" min="0" inputmode="decimal"></label>
+  </div>
+  <div class="row">
+    <label class="field">Quantity<input id="trQty" type="number" step="1" min="1" inputmode="numeric"></label>
+    <label class="field">Entry date<input id="trDate" type="date"></label>
+  </div>
+  <label class="field">Stop loss ₹ <span class="muted">(optional — default 3 × ATR)</span><input id="trStop" type="number" step="0.05" min="0" inputmode="decimal"></label>
+  <datalist id="symList"></datalist>
+  <div class="actions">
+    <button class="btn" id="trCancel">Cancel</button>
+    <button class="btn primary" id="trSave">Add trade</button>
+  </div>
+</dialog>
+
+<dialog id="closeDlg">
+  <h3 id="closeTitle">Close position</h3>
+  <label class="field">Exit price ₹<input id="clPrice" type="number" step="0.05" min="0" inputmode="decimal"></label>
+  <div class="actions">
+    <button class="btn" id="clCancel">Cancel</button>
+    <button class="btn primary" id="clSave">Close position</button>
+  </div>
+</dialog>
+
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>
